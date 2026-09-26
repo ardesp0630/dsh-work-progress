@@ -88,9 +88,9 @@ test("插槽注册的 id 与 order 符合设计", () => {
   const moduleExports = loadPlugin();
   moduleExports.apply(makeCtx((registeredOptions) => { options = registeredOptions; }));
 
-  assert.equal(options.name, "conversation.input.dock");
-  assert.equal(options.id, "work-progress", "必须用自己的 id，否则会顶掉内置任务条");
-  assert.equal(options.order, 5);
+  assert.equal(options.name, "conversation.composer.dock", "应挂在输入框下方的带区");
+  assert.equal(options.id, "work-progress", "必须用自己的 id，否则会顶掉内置统计行");
+  assert.equal(options.order, 10);
 });
 
 test("畸形会话快照一律不抛错（选择器必须在 render 阶段保持沉默）", () => {
@@ -144,6 +144,19 @@ test("没有任务清单且不在运行时整块不渲染", () => {
   const moduleExports = loadPlugin();
   const tree = renderWith(moduleExports, { running: false, chat: {} }, { todos: null });
   assert.equal(tree, null, "无内容时应当返回 null，不占位");
+});
+
+test("运行中但没有任务清单时，文案要说明白（不能只说「进行中」）", () => {
+  const moduleExports = loadPlugin();
+  const tree = renderWith(moduleExports, { running: true, chat: {} }, { todos: null });
+  assert.ok(tree, "运行中应当渲染");
+
+  const text = JSON.stringify(tree);
+  // 用户两次把「进行中」误读成功能坏了，所以这里锁住这条文案。
+  assert.ok(
+    text.includes("无任务清单"),
+    `运行中且无清单时应当说明「无任务清单」，实际为 ${text.slice(0, 400)}`,
+  );
 });
 
 test("任务清单正常时显示完成计数", () => {
