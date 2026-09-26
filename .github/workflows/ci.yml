@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # 校验「这个包能不能被 dsh plugin add 正确装上」：
+      # bundle patch 指向的文件、patch 行包名与 package.json 是否一致、
+      # 客户端入口是否存在、主机半能否作为 ESM 加载并导出完整契约。
+      - name: 包完整性自检
+        run: node scripts/verify.mjs
+
+      # 客户端半的健壮性测试：证明 useSession 选择器在畸形快照下不会在
+      # render 阶段抛错（那里抛错会连累整个 dock 区域，不只是这个面板）。
+      - name: 客户端半测试
+        run: node --test test/
+
+      # 确认发布出去的内容正确：运行必需的文件都在，开发文件不混进去。
+      - name: 预览 npm 打包内容
+        run: npm pack --dry-run

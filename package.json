@@ -1,0 +1,70 @@
+{
+    "name":  "dsh-work-progress",
+    "version":  "0.1.0",
+    "description":  "工作进度面板：在输入框上方 dock 常驻显示当前会话的任务清单完成度与运行状态，展开可见任务明细、轮次步骤、模型/工具耗时与上下文占用。",
+    "keywords":  [
+                     "deepseek",
+                     "harness",
+                     "dsh",
+                     "dsh-plugin",
+                     "conversation",
+                     "progress",
+                     "todo",
+                     "dock"
+                 ],
+    "type":  "module",
+    "scripts":  {
+                    "test":  "node --test test/",
+                    "verify":  "node scripts/verify.mjs"
+                },
+    "main":  "lib/index.js",
+    "exports":  {
+                    ".":  "./lib/index.js",
+                    "./client":  {
+                                     "default":  "./lib/client.js"
+                                 },
+                    "./cordis.patch.yml":  "./cordis.patch.yml",
+                    "./package.json":  "./package.json"
+                },
+    "files":  [
+                  "lib/*.js",
+                  "cordis.patch.yml",
+                  "README.md"
+              ],
+    "dsh":  {
+                "bundle":  {
+                               "patch":  "./cordis.patch.yml"
+                           },
+                "client":  {
+                               "platform":  "web",
+                               "inject":  [
+                                              "@deepseek-ai/dsh-client-runtime",
+                                              "@deepseek-ai/dsh-client-locale",
+                                              "@deepseek-ai/dsh-client-ui-slots",
+                                              "@deepseek-ai/dsh-client-ui-conversation"
+                                          ]
+                           }
+            },
+    "engines":  {
+                    "node":  "\u003e=22"
+                },
+    "license":  "MIT",
+    "peerDependencies":  {
+                             "@deepseek-ai/cordis":  "^4.0.1",
+                             "@deepseek-ai/dsh-client-runtime":  "\u003e=0.0.1-rc.1 \u003c0.1.0 || \u003e=0.1.0-rc.1 \u003c0.2.0-0",
+                             "@deepseek-ai/dsh-client-locale":  "\u003e=0.0.1-rc.1 \u003c0.1.0 || \u003e=0.1.0-rc.1 \u003c0.2.0-0",
+                             "@deepseek-ai/dsh-client-ui-slots":  "\u003e=0.0.1-rc.1 \u003c0.1.0 || \u003e=0.1.0-rc.1 \u003c0.2.0-0",
+                             "@deepseek-ai/dsh-client-ui-conversation":  "\u003e=0.0.1-rc.1 \u003c0.1.0 || \u003e=0.1.0-rc.1 \u003c0.2.0-0",
+                             "react":  "^18.2.0",
+                             "react-dom":  "^18.2.0"
+                         },
+    "repository":  {
+                       "type":  "git",
+                       "url":  "git+https://github.com/ardesp0630/dsh-work-progress.git"
+                   },
+    "homepage":  "https://github.com/ardesp0630/dsh-work-progress",
+    "bugs":  {
+                 "url":  "https://github.com/ardesp0630/dsh-work-progress/issues"
+             },
+    "author":  "ardesp0630"
+}

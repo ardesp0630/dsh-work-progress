@@ -1,0 +1,8 @@
+node_modules/
+pnpm-lock.yaml
+*.log
+.DS_Store
+Thumbs.db
+
+# release.ps1 生成的收录条目：它是给市场仓库提 PR 用的，不该进本仓库。
+_market-entry/

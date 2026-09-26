@@ -1,0 +1,7 @@
+# dsh-work-progress bundle patch: load the (stateless) host half so the
+# browser gains this bundle's client half. All progress data is read straight
+# from the shipped session projections on the client, so the host half owns no
+# service, no projection unit, and no state.
+- insert:
+    - id: work-progress
+      name: dsh-work-progress
