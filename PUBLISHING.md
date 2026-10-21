@@ -129,6 +129,44 @@ description:
 
 GitHub 不通**不是有人恶意屏蔽**，是两件事叠加。
 
+### 2026-10 更新：实际可行的推送方式
+
+Steam++ 的转发链会间歇性失效（表现为 127.0.0.1:443 只回自签证书、不回数据），
+此时任何「连 127.0.0.1:443」的探测都会卡在握手后无响应，很容易误判成网络封锁。
+
+稳定做法是三步，已在本次 0.2.0 推送中验证：
+
+1. **把 hosts 里的 `github.com` 指向真实 IP**（其余 `api.github.com` 等条目可不动）：
+
+   ```
+   # 127.0.0.1 github.com          ← 原 Steam++ 行
+   20.205.243.166 github.com       ← 改为真实 IP
+   ```
+
+   真实 IP 用 `node -e "dns.resolve4('github.com',console.log)"` 取，**不要用 dns.lookup**
+   （后者读 hosts）。改完 `ipconfig /flushdns`。
+
+2. **git 换 openssl 后端**：schannel 在吊销检查上直接失败
+   （`CRYPT_E_NO_REVOCATION_CHECK`），且 `http.schannelCheckRevoke=false` 对它无效。
+
+   ```
+   git config http.sslBackend openssl
+   ```
+
+3. **给 openssl 一份 CA 包**：这个 git 安装（`C:\Espressif\tools\git`）没有自带
+   `ca-bundle.crt`，需从 Windows 证书存储导出：
+
+   ```powershell
+   # 导出 LocalMachine\Root 与 \CA 到 windows-ca.pem，再指向它
+   git config http.sslCAInfo "$env:TEMP\windows-ca.pem"
+   ```
+
+   这样**证书校验保持开启**，不需要 `GIT_SSL_NO_VERIFY`。
+
+> 如果哪天直连也失效，回退手段：`dns.resolve4` 拿到别的前端 IP（如 140.82.112.3 /
+> 20.27.177.113）逐个试，能拿到 `200 OK` 的那个填回 hosts。
+> 改 hosts 会留下备份 `hosts.bak-dsh-<时间戳>`，随时可还原。
+
 **1. hosts 被 Steam++（Watt Toolkit）接管。** 文件里有它自己的管理标记：
 
 ```
