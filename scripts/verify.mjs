@@ -88,7 +88,7 @@ for (const f of ["LICENSE", "README.md"]) {
 }
 
 // ---- 主机半：作为真正的 ESM 加载一次 ---------------------------------------
-// 它顶层无副作用（只定义 name / Config / apply），所以可以安全 import。
+// 它顶层无副作用（只定义 name / apply），所以可以安全 import。
 // 这样验证的是「node 能加载它 + 导出契约完整」，比单纯语法检查更强。
 // （注意：不能用 vm.Script —— 那个按脚本解析，遇到 ESM 的 export 一律报错。）
 const hostAbs = join(root, "lib/index.js");
@@ -98,7 +98,9 @@ if (existsSync(hostAbs)) {
     passes.push("lib/index.js 可作为 ESM 加载");
     check("导出 name", typeof mod.name === "string" && mod.name !== "");
     check("导出 apply 函数", typeof mod.apply === "function");
-    check("导出 Config", mod.Config !== undefined);
+    // 本插件没有配置项，所以不导出 Config：伪造一个 ~standard 对象只会让
+    // 配置检查把它标成 unsupported（无配置插件显示 absent）。
+    check("不导出多余的 Config", mod.Config === undefined, `实际导出了 ${typeof mod.Config}`);
   } catch (e) {
     failures.push(`lib/index.js 加载失败: ${e.message}`);
   }

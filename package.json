@@ -1,6 +1,6 @@
 {
     "name":  "dsh-work-progress",
-    "version":  "0.1.1",
+    "version":  "0.2.0",
     "description":  "工作进度面板：在输入框下方的带区常驻显示当前会话的任务清单完成度与运行状态，展开可见任务明细、轮次步骤、模型/工具耗时与上下文占用。",
     "keywords":  [
                      "deepseek",
@@ -14,7 +14,7 @@
                  ],
     "type":  "module",
     "scripts":  {
-                    "test":  "node --test test/",
+                    "test":  "node --test \"test/**/*.test.mjs\"",
                     "verify":  "node scripts/verify.mjs"
                 },
     "main":  "lib/index.js",
@@ -38,23 +38,19 @@
                 "client":  {
                                "platform":  "web",
                                "inject":  [
-                                              "@deepseek-ai/dsh-client-runtime",
-                                              "@deepseek-ai/dsh-client-locale",
-                                              "@deepseek-ai/dsh-client-ui-slots",
                                               "@deepseek-ai/dsh-client-ui-conversation"
                                           ]
                            }
             },
     "engines":  {
-                    "node":  "\u003e=22"
+                    "node":  "\u003e=22",
+                    "dsh":  "\u003e=0.1.0-0 \u003c0.3.0-0"
                 },
     "license":  "MIT",
     "peerDependencies":  {
                              "@deepseek-ai/cordis":  "^4.0.1",
-                             "@deepseek-ai/dsh-client-runtime":  "\u003e=0.0.1-rc.1 \u003c0.1.0 || \u003e=0.1.0-rc.1 \u003c0.2.0-0",
-                             "@deepseek-ai/dsh-client-locale":  "\u003e=0.0.1-rc.1 \u003c0.1.0 || \u003e=0.1.0-rc.1 \u003c0.2.0-0",
-                             "@deepseek-ai/dsh-client-ui-slots":  "\u003e=0.0.1-rc.1 \u003c0.1.0 || \u003e=0.1.0-rc.1 \u003c0.2.0-0",
-                             "@deepseek-ai/dsh-client-ui-conversation":  "\u003e=0.0.1-rc.1 \u003c0.1.0 || \u003e=0.1.0-rc.1 \u003c0.2.0-0",
+                             "@deepseek-ai/dsh-client-locale":  "\u003e=0.1.0-rc.1 \u003c0.3.0-0",
+                             "@deepseek-ai/dsh-client-ui-conversation":  "\u003e=0.1.0-rc.1 \u003c0.3.0-0",
                              "react":  "^18.2.0",
                              "react-dom":  "^18.2.0"
                          },

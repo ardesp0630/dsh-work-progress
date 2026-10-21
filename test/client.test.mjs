@@ -3,10 +3,11 @@
  *
  *   node --test test/
  *
- * 为什么要测这个：组件的 useSession 选择器跑在 React 的 render 阶段。
+ * 为什么要测这个：组件的 useChat 选择器跑在 React 的 render 阶段。
  * 一旦选择器里抛出 TypeError，坏掉的不是这一个面板，而是整个 dock 区域
- * （React 会把该子树整个卸载）。会话快照的顶层字段形态并不属于 slot 的
- * 契约，所以它们必须被防御，而且这种防御必须被证明有效。
+ * （React 会把该子树整个卸载）。聊天快照的形态并不属于 slot 的契约 ——
+ * 0.2.x 给的是 { order, nodes }，1.x 曾经给的是会话快照上的 chat 字段 ——
+ * 所以两者都必须被防御，而且这种防御必须被证明有效。
  *
  * 做法是加载真实的 lib/client.js：在 vm 里 mock 掉 window.__ModuleLoader__
  * 捕获插件定义，再用 mock 的 react 取出注册到插槽的那个组件，喂各种畸形
@@ -72,15 +73,21 @@ function makeCtx(onRegister) {
 }
 
 /** 把组件注册到 mock 插槽上并渲染一次，返回它。 */
-function renderWith(moduleExports, snapshot, projections = {}) {
+function renderWith(moduleExports, chat, projections = {}, options = {}) {
   let component = null;
   moduleExports.apply(makeCtx((_options, registered) => { component = registered; }));
-  assert.ok(component, "组件没有注册到 conversation.input.dock");
+  assert.ok(component, "组件没有注册到 conversation.composer.dock");
 
-  return component({
+  // running 由 useSession 提供，会话流由 useChat 提供（0.2.x 的插槽属性表）。
+  const running = options.running === undefined ? true : options.running;
+  const props = {
     useProjection: (key) => projections[key],
-    useSession: (selector) => selector(snapshot),
-  });
+    useSession: (selector) => selector({ running }),
+  };
+  // options.useChat === false 用来模拟 1.x 那种没有 useChat 的插槽。
+  if (options.useChat !== false) props.useChat = (selector) => selector(chat);
+
+  return component(props);
 }
 
 test("插槽注册的 id 与 order 符合设计", () => {
@@ -93,43 +100,50 @@ test("插槽注册的 id 与 order 符合设计", () => {
   assert.equal(options.order, 10);
 });
 
-test("畸形会话快照一律不抛错（选择器必须在 render 阶段保持沉默）", () => {
+test("畸形聊天快照一律不抛错（选择器必须在 render 阶段保持沉默）", () => {
   const moduleExports = loadPlugin();
 
   const snapshots = [
-    ["snapshot 为 null", null],
-    ["snapshot 非对象", "nonsense"],
-    ["chat 缺失", { running: true }],
-    ["chat 为 null", { running: true, chat: null }],
-    ["order 非数组", { running: true, chat: { order: "x" } }],
-    ["order 为空数组", { running: true, chat: { order: [] } }],
-    ["nodes 缺失", { running: true, chat: { order: ["k"] } }],
-    ["nodes 为 null", { running: true, chat: { order: ["k"], nodes: null } }],
-    ["nodes 没有 get 方法", { running: true, chat: { order: ["k"], nodes: {} } }],
-    ["节点为 null", { running: true, chat: { order: ["k"], nodes: new Map([["k", null]]) } }],
-    ["节点缺 kind", { running: true, chat: { order: ["k"], nodes: new Map([["k", {}]]) } }],
-    ["tool-call 但 data 非法", { running: true, chat: { order: ["k"], nodes: new Map([["k", { kind: "tool-call", data: null }]]) } }],
-    ["tool-call 但 root 非法", { running: true, chat: { order: ["k"], nodes: new Map([["k", { kind: "tool-call", data: { root: 42 } }]]) } }],
-    ["running 非布尔", { running: "yes", chat: {} }],
+    ["快照为 null", null],
+    ["快照非对象", "nonsense"],
+    ["快照是数字", 42],
+    ["order 缺失", {}],
+    ["order 为 null", { order: null }],
+    ["order 非数组", { order: "x" }],
+    ["order 为空数组", { order: [] }],
+    ["nodes 缺失", { order: ["k"] }],
+    ["nodes 为 null", { order: ["k"], nodes: null }],
+    ["nodes 没有 get 方法", { order: ["k"], nodes: {} }],
+    ["节点为 undefined", { order: ["k"], nodes: new Map() }],
+    ["节点为 null", { order: ["k"], nodes: new Map([["k", null]]) }],
+    ["节点非对象", { order: ["k"], nodes: new Map([["k", "x"]]) }],
+    ["节点缺 kind", { order: ["k"], nodes: new Map([["k", {}]]) }],
+    ["tool-call 但 data 非法", { order: ["k"], nodes: new Map([["k", { kind: "tool-call", data: null }]]) }],
+    ["tool-call 但 root 非法", { order: ["k"], nodes: new Map([["k", { kind: "tool-call", data: { root: 42 } }]]) }],
   ];
 
-  for (const [label, snapshot] of snapshots) {
+  for (const [label, chat] of snapshots) {
     assert.doesNotThrow(
-      () => renderWith(moduleExports, snapshot),
-      `快照形态「${label}」让组件抛错了`,
+      () => renderWith(moduleExports, chat, { todos: [{ content: "甲", status: "pending" }] }),
+      `聊天快照形态「${label}」让组件抛错了`,
     );
   }
+});
+
+test("插槽不提供 useChat 时也不能崩（1.x 兼容路径）", () => {
+  const moduleExports = loadPlugin();
+  assert.doesNotThrow(
+    () => renderWith(moduleExports, null, { todos: [{ content: "甲", status: "pending" }] }, { useChat: false }),
+    "缺少 useChat 属性时组件抛错了",
+  );
 });
 
 test("正常快照能读出当前动作", () => {
   const moduleExports = loadPlugin();
   const node = { kind: "tool-call", data: { root: { name: "pwsh" } } };
-  const snapshot = {
-    running: true,
-    chat: { order: ["a"], nodes: new Map([["a", node]]) },
-  };
+  const chat = { order: ["a"], nodes: new Map([["a", node]]) };
 
-  const tree = renderWith(moduleExports, snapshot);
+  const tree = renderWith(moduleExports, chat);
   assert.ok(tree, "有 running 时应当渲染而不是返回 null");
 
   // 组件是嵌套结构，直接把整棵树序列化出来找那句活动文案。
@@ -142,13 +156,13 @@ test("正常快照能读出当前动作", () => {
 
 test("没有任务清单且不在运行时整块不渲染", () => {
   const moduleExports = loadPlugin();
-  const tree = renderWith(moduleExports, { running: false, chat: {} }, { todos: null });
+  const tree = renderWith(moduleExports, {}, { todos: null }, { running: false });
   assert.equal(tree, null, "无内容时应当返回 null，不占位");
 });
 
 test("运行中但没有任务清单时，文案要说明白（不能只说「进行中」）", () => {
   const moduleExports = loadPlugin();
-  const tree = renderWith(moduleExports, { running: true, chat: {} }, { todos: null });
+  const tree = renderWith(moduleExports, {}, { todos: null }, { running: true });
   assert.ok(tree, "运行中应当渲染");
 
   const text = JSON.stringify(tree);
@@ -163,7 +177,7 @@ test("任务清单正常时显示完成计数", () => {
   const moduleExports = loadPlugin();
   const tree = renderWith(
     moduleExports,
-    { running: false, chat: {} },
+    {},
     {
       todos: [
         { content: "甲", status: "completed" },
@@ -171,6 +185,7 @@ test("任务清单正常时显示完成计数", () => {
         { content: "丙", status: "pending" },
       ],
     },
+    { running: false },
   );
   const text = JSON.stringify(tree);
   assert.ok(text.includes("任务 1/3"), `期望「任务 1/3」，实际为 ${text.slice(0, 400)}`);
